@@ -4,7 +4,7 @@ FROM ubuntu:24.04 AS base
 # 安装依赖
 RUN apt-get update -y
 RUN apt-get install -y --no-install-recommends \
-        ca-certificates tini build-essential git
+        ca-certificates tini build-essential git gdb
 RUN apt-get install -y --no-install-recommends \
         cmake ninja-build default-jdk bison flex lld
 RUN apt-get install -y --no-install-recommends \
