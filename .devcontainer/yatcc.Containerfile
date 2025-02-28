@@ -4,13 +4,14 @@ FROM ubuntu:24.04 AS base
 # 安装依赖
 RUN apt-get update -y
 RUN apt-get install -y --no-install-recommends \
-        ca-certificates tini build-essential git gdb
+        ca-certificates tini build-essential git
 RUN apt-get install -y --no-install-recommends \
         cmake ninja-build default-jdk bison flex lld
 RUN apt-get install -y --no-install-recommends \
         python3 python3-yaml
 RUN apt-get install -y --no-install-recommends \
         qemu-user-static
+RUN apt-get install -y --no-install-recommends gdb
 RUN apt-get autoremove -y && \
     apt-get clean -y
 
