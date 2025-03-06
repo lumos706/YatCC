@@ -55,7 +55,7 @@ class CasesHelper(NamedTuple):
 
                 input_path = os.path.join(
                     srcdir,
-                    name.rstrip(".sysu.c") + ".in",
+                    name.removesuffix(".sysu.c") + ".in",
                 )
                 if not os.path.exists(input_path):
                     input_path = None
