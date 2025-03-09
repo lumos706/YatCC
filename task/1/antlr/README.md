@@ -55,6 +55,7 @@ DigitSequence
     ;
 ```
 
+TODO:同学们需要依据token添加相应的规则。
 
 
 ## 1.2 `main.cpp`的介绍
@@ -108,4 +109,8 @@ for (auto&& token : tokens.getTokens())
 ```
 
 `for`循环中剩下的代码用于判断是否输出`[StartOfLine]`和`[LeadingSpace]`以及输出最终结果，这些代码不用同学们进行修改，所以不做更多的介绍。
+
+总结：`main`函数是对输入输出进行处理并初始化词法分析器，`print_token`函数是对每一个token进行处理，`main`函数使用`for`循环不断调用`print_token`函数输出token信息。
+
+TODO：同学们需要在`unordered_map`中补全映射信息（与`g4`文件的规则对应），并在`print_token`函数中补全识别每个token位置信息和属性标记的代码。
 
