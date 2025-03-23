@@ -499,6 +499,46 @@ def check_ast(
     return node_helper
 
 
+# 化简answer.yaml：删除 "range"、"id" 和 "loc" 键等评分无关的键
+keys_to_remove = ["range", "id", "loc", "referencedDecl", "isUsed", "mangledName", "array_filler", "init"]
+
+def remove_keys(json_data: Any, keys_to_remove: list) -> Any:
+    """简化 answer.yaml：递归函数来删除json文件中指定的键"""
+
+    if isinstance(json_data, dict):
+        json_data = {
+            key: remove_keys(value, keys_to_remove)
+            for key, value in json_data.items()
+            if key not in keys_to_remove
+        }
+    elif isinstance(json_data, list):
+        json_data = [remove_keys(item, keys_to_remove) for item in json_data]
+    return json_data
+
+
+def move_inner_to_end(data):
+    """整理 output.json 的键值对顺序""" 
+    if isinstance(data, dict):
+        keys = list(data.keys())
+        if 'inner' in keys:
+            # Remove 'inner' and store its value
+            inner_value = data.pop('inner')
+            # Recursively adjust any nested dictionaries
+            for key in keys:
+                if key != 'inner':
+                    data[key] = move_inner_to_end(data[key])
+            # Reinsert 'inner' at the end
+            data['inner'] = move_inner_to_end(inner_value)
+        else:
+            # Process all key-value pairs recursively
+            for key in keys:
+                data[key] = move_inner_to_end(data[key])
+    elif isinstance(data, list):
+        # Process each element in the list
+        data = [move_inner_to_end(item) for item in data]
+    return data
+
+
 def score_one(
     cases_helper: CasesHelper, case: CasesHelper.Case
 ) -> ScoreReport.TestEntry:
@@ -537,11 +577,15 @@ def score_one(
                 output = "标准答案文件损坏"
                 fprint(fp, "标准答案文件损坏：", std_answer_path)
                 raise Error(e)
-            # 转化成 yaml 格式输出
+            # 转化成 yaml 格式和 simplied.json 格式输出
             try:
-                NodeHelper.filter_ast(std_answer)
+                NodeHelper.filter_ast(std_answer)                    
+                # 简化 answer.yaml, 删除不需要的 key
+                simplied_std_answer = remove_keys(std_answer, keys_to_remove)
                 with open(cases_helper.of_case_bindir("answer.yaml", case), "w") as f:
-                    f.write(yaml.dump(std_answer))
+                    f.write(yaml.dump(simplied_std_answer))
+                with open(cases_helper.of_case_bindir("answer.simplied.json", case), "w") as f:
+                    json.dump(simplied_std_answer, f, indent=2)
             except Exception as e:
                 output = "转化为yaml失败"
                 fprint(fp, "转化为yaml失败")
@@ -564,6 +608,15 @@ def score_one(
             except Exception as e:
                 output = "转化为yaml失败"
                 fprint(fp, "转化为yaml失败")
+                raise Error(e)
+            # 重新整理 json 排版
+            try:
+                judge_answer = move_inner_to_end(judge_answer)
+                with open(cases_helper.of_case_bindir("output.json", case), "w") as f:
+                    json.dump(judge_answer, f, indent=2)
+            except Exception as e:
+                output = "重新整理json失败"
+                fprint(fp, "重新整理json失败")
                 raise Error(e)
 
             ast_helper = AstHelper()
