@@ -1,0 +1,27 @@
+// https://containers.dev/implementors/json_reference
+{
+  "name": "YatCC",
+  "remoteUser": "root",
+
+  "image": "registry.cn-guangzhou.aliyuncs.com/yhgu2000/yatcc:latest",
+  "workspaceMount": "type=bind,src=${localWorkspaceFolder},dst=/YatCC",
+  "workspaceFolder": "/YatCC",
+
+  // 允许 C/C++ 调试
+  "capAdd": ["SYS_PTRACE"],
+  "securityOpt": ["seccomp=unconfined"],
+
+  "customizations": {
+    // VS Code 插件
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools-extension-pack",
+        "ms-vscode.cmake-tools",
+        "qiu.llvm-ir-language-support",
+        "daohong-emilio.yash",
+        "mike-lischke.vscode-antlr4",
+        "twxs.cmake"
+      ]
+    }
+  }
+}

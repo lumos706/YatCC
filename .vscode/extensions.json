@@ -1,0 +1,19 @@
+{
+  "recommendations": [
+    // 对于普通学生用户：
+    "ms-vscode-remote.vscode-remote-extensionpack",
+    "ms-vscode.cpptools-extension-pack",
+    "ms-vscode.cmake-tools",
+    "qiu.llvm-ir-language-support",
+    "daohong-emilio.yash",
+    "mike-lischke.vscode-antlr4",
+    "twxs.cmake",
+    // 对于项目开发人员：
+    "ms-python.python",
+    "ms-python.flake8",
+    "ms-python.black-formatter",
+    "ms-python.isort",
+    "njpwerner.autodocstring",
+    "cheshirekow.cmake-format"
+  ]
+}
