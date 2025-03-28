@@ -21,10 +21,15 @@ if __name__ == "__main__":
     parser.add_argument("cases_file", help="测例表路径")
     parser.add_argument("clang_exe", help="Clang 程序路径")
     parser.add_argument("rtlib", help="运行时库路径")
+    parser.add_argument("--no-cache", action="store_true", help="禁用缓存机制")
     args = parser.parse_args()
     print_parsed_args(parser, args)
 
-    cache = exit_if_cases_cached(args.bindir, args.cases_file)
+    if args.no_cache:
+        print("缓存机制已禁用，所有测试用例将被重新计算。")
+        cache = None  # 直接跳过缓存
+    else:
+        cache = exit_if_cases_cached(args.bindir, args.cases_file)
 
     print("加载测例表...", end="", flush=True)
     cases_helper = CasesHelper.load_file(
@@ -50,4 +55,5 @@ if __name__ == "__main__":
             )
         print("OK")
 
-    cache_cases(args.bindir, cache)
+    if not args.no_cache:
+        cache_cases(args.bindir, cache)
