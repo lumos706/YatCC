@@ -2,14 +2,17 @@ import json
 import os
 import sys
 import math
-from typing import NamedTuple, Optional
+from typing import Optional
+from dataclasses import dataclass, field
 import argparse
 
 
-class CasesHelper(NamedTuple):
+@dataclass
+class CasesHelper:
     """评分测例助手"""
 
-    class Case(NamedTuple):
+    @dataclass
+    class Case:
         name: str
         weight: float
         input: Optional[str]
@@ -20,7 +23,7 @@ class CasesHelper(NamedTuple):
     bindir: str
     """测例输出目录"""
 
-    cases: list[Case] = []
+    cases: list[Case] = field(default_factory=lambda: [])
     """测例表"""
 
     @staticmethod
@@ -96,14 +99,22 @@ class CasesHelper(NamedTuple):
         """
         return self.of_bindir(os.path.join(case.name, relpath), mkdir)
 
-    def open_autograder_json(self):
-        """打开 Autograder 使用的 JSON 文件"""
-        path = self.of_bindir("score.json", True)
+    def open_autograder_json(self, name: str = "score.json"):
+        """打开 Autograder 使用的 JSON 文件
+
+        :param str name: JSON 文件名，默认为 score.json
+        """
+
+        path = self.of_bindir(name, True)
         return path, open(path, "w", encoding="utf-8")
 
-    def open_root_report(self):
-        """打开总评分报告文件"""
-        path = self.of_bindir("score.txt", True)
+    def open_root_report(self, name: str = "score.txt"):
+        """打开总评分报告文件
+
+        :param str name: 报告文件名，默认为 score.txt
+        """
+        
+        path = self.of_bindir(name, True)
         return path, open(path, "w", encoding="utf-8")
 
     def open_case_report(self, case: Case):
@@ -131,10 +142,12 @@ class CasesHelper(NamedTuple):
         return (path, open(path, "rb"))
 
 
-class ScoreReport(NamedTuple):
+@dataclass
+class ScoreReport:
     """评分报告"""
 
-    class TestEntry(NamedTuple):
+    @dataclass
+    class TestEntry:
         name: str  # 为测例的相对路径
         score: int
         max_score: int
@@ -142,7 +155,8 @@ class ScoreReport(NamedTuple):
         output_path: str = ""
         weight: float = 1.0
 
-    class LeaderBoardEntry(NamedTuple):
+    @dataclass
+    class LeaderBoardEntry:
         name: str
         value: float
         order: int
@@ -150,8 +164,8 @@ class ScoreReport(NamedTuple):
         suffix: str = ""
 
     title: str
-    tests: list[TestEntry] = []
-    leader_board: list[LeaderBoardEntry] = []
+    tests: list[TestEntry] = field(default_factory=lambda: [])
+    leader_board: list[LeaderBoardEntry] = field(default_factory=lambda: [])
 
     def final_score(self) -> float:
         """计算最终得分（总分）

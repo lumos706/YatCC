@@ -3,6 +3,7 @@ find_package(BISON 3.8)
 
 find_package(antlr4-runtime 4.13)
 find_package(antlr4-generator 4.13)
+find_package(pybind11 2.13.6)
 
 if(NOT EXISTS ${LLVM_INSTALL_DIR})
   message(FATAL_ERROR "未找到 LLVM 安装目录！请检查 YatCC_LLVM_DIR 环境变量。")

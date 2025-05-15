@@ -13,7 +13,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 # 使用 Python 实现复杂的生成任务
 find_package(
   Python3
-  COMPONENTS Interpreter
+  COMPONENTS Interpreter Development
   REQUIRED)
 
 # 任务

@@ -9,6 +9,8 @@ antlr/*
 !antlr/setup.sh
 llvm/*
 !llvm/setup.sh
+pybind11/*
+!pybind11/setup.sh
 
 .devcontainer/*
 !.devcontainer/devcontainer.json

@@ -4,6 +4,7 @@ cd $(dirname "$0")
 
 ../antlr/setup.sh
 ../llvm/setup.sh
+../pybind11/setup.sh
 
 if [ -z "$YatCC_ANTLR_DIR" ]; then
   YatCC_ANTLR_DIR=$(realpath ../antlr)
@@ -11,7 +12,10 @@ fi
 if [ -z "$YatCC_LLVM_DIR" ]; then
   YatCC_LLVM_DIR=$(realpath ../llvm)
 fi
-rm -rf antlr llvm
+if [ -z "$YatCC_PYBIND11_DIR" ]; then
+  YatCC_PYBIND11_DIR=$(realpath ../pybind11)
+fi
+rm -rf antlr llvm pybind11
 
 mkdir antlr
 cp -rlP $YatCC_ANTLR_DIR/antlr.jar antlr/antlr.jar
@@ -39,6 +43,10 @@ cp -rlP -t llvm/install/lib \
   $_llvm_install/lib/clang
 cp -rlP $_llvm_install/libexec llvm/install/libexec
 cp -rlP $_llvm_install/share llvm/install/share
+
+mkdir pybind11
+cp -rlP $YatCC_PYBIND11_DIR/source pybind11/source
+cp -rlP $YatCC_PYBIND11_DIR/install pybind11/install
 
 _version=$(date -u +%Y%m%dT%H%M%SZ)
 buildah build --layers -f yatcc.Containerfile --target base -t yatcc:base .
