@@ -82,9 +82,7 @@
     "cinttypes": "cpp",
     "typeindex": "cpp",
     "typeinfo": "cpp",
-    "variant": "cpp",
-    "unordered_set": "cpp",
-    "*.inc": "cpp"
+    "variant": "cpp"
   },
 
   //* C/C++
@@ -97,6 +95,5 @@
     "editor.formatOnType": true
   },
   "flake8.args": ["--ignore=E203,W503", "--max-line-length=88"],
-  "autoDocstring.docstringFormat": "one-line-sphinx",
-  "C_Cpp.errorSquiggles": "disabled"
+  "autoDocstring.docstringFormat": "one-line-sphinx"
 }

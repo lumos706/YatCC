@@ -1,15 +1,15 @@
 # 你的学号
-set(STUDENT_ID "22336216")
+set(STUDENT_ID "0123456789")
 # 你的姓名
-set(STUDENT_NAME "陶宇卓")
+set(STUDENT_NAME "某某某")
 
 # 实验一的完成方式："flex"或"antlr"
-set(TASK1_WITH "antlr")
+set(TASK1_WITH "flex")
 # 实验一的日志级别，级别从低到高为0-3
 set(TASK1_LOG_LEVEL 3)
 
 # 实验二的完成方式："bison"或"antlr"
-set(TASK2_WITH "antlr")
+set(TASK2_WITH "bison")
 # 是否在实验二复活，ON或OFF
 set(TASK2_REVIVE ON)
 # 实验二的日志级别，级别从低到高为0-3
@@ -48,25 +48,36 @@ set(LLVM_INSTALL_DIR "${_llvm_dir}/install")
 set(CLANG_EXECUTABLE "${_llvm_dir}/install/bin/clang")
 set(CLANG_PLUS_EXECUTABLE "${_llvm_dir}/install/bin/clang++")
 
+# PYBIND11
+if(DEFINED ENV{YatCC_PYBIND11_DIR})
+  set(_pybind11_dir "$ENV{YatCC_PYBIND11_DIR}")
+else()
+  set(_pybind11_dir "${CMAKE_SOURCE_DIR}/pybind11")
+endif()
+message("PYBIND11目录为 ${_pybind11_dir}")
+set(pybind11_DIR "${_pybind11_dir}/install/share/cmake/pybind11")
+
 # 测试运行时限（秒）
 set(CTEST_TEST_TIMEOUT 3)
 
 # 实验一排除测例名的正则式
-set(TASK1_EXCLUDE_REGEX "^performance/.*")
+set(TASK1_EXCLUDE_REGEX "^performance/.*|^llm-performance/.*")
 # 实验一测例表，非空时忽略 EXCLUDE_REGEX
 set(TASK1_CASES_TXT "")
 
 # 实验二排除测例名的正则式
-set(TASK2_EXCLUDE_REGEX "^performance/.*")
+set(TASK2_EXCLUDE_REGEX "^performance/.*|^llm-performance/.*")
 # 实验二测例表，非空时忽略 EXCLUDE_REGEX
 set(TASK2_CASES_TXT "")
 
 # 实验三排除测例名的正则式
-set(TASK3_EXCLUDE_REGEX "^performance/.*")
+set(TASK3_EXCLUDE_REGEX "^performance/.*|^llm-performance/.*")
 # 实验三测例表，非空时忽略 EXCLUDE_REGEX
 set(TASK3_CASES_TXT "")
 
 # 实验四排除测例名的正则式
 set(TASK4_EXCLUDE_REGEX "^functional-.*|^mini-performance/.*")
+# 实验四 LLM 定向优化测例名正则式
+set(TASK4_LLM_REGEX "^llm-performance/.*")
 # 实验四测例表，非空时忽略 EXCLUDE_REGEX
 set(TASK4_CASES_TXT "")

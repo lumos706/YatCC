@@ -21,7 +21,9 @@ class Error(Exception):
 def get_tm(sp):
     val = -1
     ret = -1
-    matchTimerObj = re.findall("Timer@(\\d*)-(\\d*): (\\d*)H-(\\d*)M-(\\d*)S-(\\d*)us", sp)
+    matchTimerObj = re.findall(
+        "Timer@(\\d*)-(\\d*): (\\d*)H-(\\d*)M-(\\d*)S-(\\d*)us", sp
+    )
     matchTotalObj = re.findall("TOTAL: (\\d*)H-(\\d*)M-(\\d*)S-(\\d*)us", sp)
     matchRetObj = re.findall("Return Code: (\\d*)", sp)
     if len(matchRetObj) == 0 or len(matchTotalObj) == 0:
@@ -156,7 +158,7 @@ def score_one(
             if output_time == -2 and output_ret == -2:
                 output = "用户答案运行输出格式有误，检查生成的代码是否有误"
                 raise Error()
-            
+
             if answer_time == -1:
                 max_score = 1.0
 
@@ -213,11 +215,10 @@ def score_one(
     )
 
 
-def score_all(cases_helper: CasesHelper) -> ScoreReport:
+def score_all(cases_helper: CasesHelper, title: str) -> ScoreReport:
     """评测所有测例，生成成绩单"""
 
-    score_report = ScoreReport("task4")
-
+    score_report = ScoreReport(title)
     for case in cases_helper.cases:
         test_entry = score_one(cases_helper, case)
         if test_entry.weight == 0:
@@ -238,6 +239,39 @@ def score_all(cases_helper: CasesHelper) -> ScoreReport:
     )
 
     return score_report
+
+
+def generate_score_report(
+    cases_helper: CasesHelper,
+    title: str,
+    root_report_name: str,
+    autograder_json_name: str,
+) -> None:
+    """评分，生成成绩单，打印成绩单，保存成绩单
+
+    :param CaseHelper cases_helper: 需要评分的测例
+    :param str title: 评分报告标题
+    :param str root_report_name: 总评分报告文件名
+    :param str autograder_json_name: Autograder 使用的 JSON 文件的名字
+    """
+    
+    print()
+    score_report = score_all(cases_helper, title)
+    print()
+    print("=" * 80)
+    score_report.print()
+    print("=" * 80)
+
+    # 保存成绩单
+    txt_path, f = cases_helper.open_root_report(root_report_name)
+    with f:
+        score_report.dump_human_text(f)
+    print("成绩单已保存：", cases_helper.of_bindir(root_report_name))
+
+    json_path, f = cases_helper.open_autograder_json(autograder_json_name)
+    with f:
+        score_report.dump_autograder(f)
+    print("JSON 格式：", cases_helper.of_bindir(autograder_json_name))
 
 
 if __name__ == "__main__":
@@ -307,22 +341,23 @@ if __name__ == "__main__":
             )
         print("完成")
 
-        # 评分，生成成绩单
-        print()
-        score_report = score_all(cases_helper)
-        print()
+        classic_cases = []
+        llm_cases = []
+        for cases in cases_helper.cases:
+            if cases.name.startswith("llm-performance"):
+                llm_cases.append(cases)
+            else:
+                classic_cases.append(cases)
+        classic_cases_helper = CasesHelper(
+            srcdir=cases_helper.srcdir, bindir=cases_helper.bindir, cases=classic_cases
+        )
+        llm_cases_helper = CasesHelper(
+            srcdir=cases_helper.srcdir, bindir=cases_helper.bindir, cases=llm_cases
+        )
 
-        print("=" * 80)
-        score_report.print()
-        print("=" * 80)
-
-        # 保存成绩单
-        txt_path, f = cases_helper.open_root_report()
-        with f:
-            score_report.dump_human_text(f)
-        print("成绩单已保存：", cases_helper.of_bindir("score.txt"))
-
-        json_path, f = cases_helper.open_autograder_json()
-        with f:
-            score_report.dump_autograder(f)
-        print("JSON 格式：", cases_helper.of_bindir("score.json"))
+        generate_score_report(
+            classic_cases_helper, "task4-classic", "score-classic.txt", "score-classic.json"
+        )
+        generate_score_report(
+            llm_cases_helper, "task4-llm", "score-llm.txt", "score-llm.json"
+        )

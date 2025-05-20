@@ -8,10 +8,9 @@ RUN apt-get install -y --no-install-recommends \
 RUN apt-get install -y --no-install-recommends \
         cmake ninja-build default-jdk bison flex lld
 RUN apt-get install -y --no-install-recommends \
-        python3 python3-yaml
+        python3 python3-yaml python3-pytest python3-openai python3-dev
 RUN apt-get install -y --no-install-recommends \
         qemu-user-static
-RUN apt-get install -y --no-install-recommends gdb
 RUN apt-get autoremove -y && \
     apt-get clean -y
 
@@ -25,8 +24,10 @@ FROM base AS full
 # 复制预构建的文件
 COPY antlr /dat/antlr
 COPY llvm /dat/llvm
+COPY pybind11 /dat/pybind11
 
 # 设置环境变量
 ENV YatCC_ANTLR_DIR=/dat/antlr \
     YatCC_LLVM_DIR=/dat/llvm \
+    YatCC_PYBIND11_DIR=/dat/pybind11 \
     PATH=/dat/llvm/install/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin

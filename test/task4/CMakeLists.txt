@@ -59,8 +59,15 @@ if(TASK4_REVIVE)
   foreach(_case ${_task4_cases})
     set(_output_dir ${CMAKE_CURRENT_BINARY_DIR}/${_case})
     file(MAKE_DIRECTORY ${_output_dir})
-    add_test(NAME task4/${_case} COMMAND task4 ${_task3_out}/${_case}/answer.ll
-                                         ${_output_dir}/output.ll)
+    if(_case MATCHES ${TASK4_LLM_REGEX})
+      add_test(NAME task4/${_case}
+               COMMAND task4-llm ${_task3_out}/${_case}/answer.ll
+                       ${_output_dir}/output.ll)
+    else()
+      add_test(NAME task4/${_case}
+               COMMAND task4-classic ${_task3_out}/${_case}/answer.ll
+                       ${_output_dir}/output.ll)
+    endif()
     add_test(
       NAME test4/${_case}
       COMMAND

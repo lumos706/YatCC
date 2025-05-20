@@ -500,7 +500,17 @@ def check_ast(
 
 
 # 化简answer.yaml：删除 "range"、"id" 和 "loc" 键等评分无关的键
-keys_to_remove = ["range", "id", "loc", "referencedDecl", "isUsed", "mangledName", "array_filler", "init"]
+keys_to_remove = [
+    "range",
+    "id",
+    "loc",
+    "referencedDecl",
+    "isUsed",
+    "mangledName",
+    "array_filler",
+    "init",
+]
+
 
 def remove_keys(json_data: Any, keys_to_remove: list) -> Any:
     """简化 answer.yaml：递归函数来删除json文件中指定的键"""
@@ -517,18 +527,18 @@ def remove_keys(json_data: Any, keys_to_remove: list) -> Any:
 
 
 def move_inner_to_end(data):
-    """整理 output.json 的键值对顺序""" 
+    """整理 output.json 的键值对顺序"""
     if isinstance(data, dict):
         keys = list(data.keys())
-        if 'inner' in keys:
+        if "inner" in keys:
             # Remove 'inner' and store its value
-            inner_value = data.pop('inner')
+            inner_value = data.pop("inner")
             # Recursively adjust any nested dictionaries
             for key in keys:
-                if key != 'inner':
+                if key != "inner":
                     data[key] = move_inner_to_end(data[key])
             # Reinsert 'inner' at the end
-            data['inner'] = move_inner_to_end(inner_value)
+            data["inner"] = move_inner_to_end(inner_value)
         else:
             # Process all key-value pairs recursively
             for key in keys:
@@ -579,12 +589,14 @@ def score_one(
                 raise Error(e)
             # 转化成 yaml 格式和 simplied.json 格式输出
             try:
-                NodeHelper.filter_ast(std_answer)                    
+                NodeHelper.filter_ast(std_answer)
                 # 简化 answer.yaml, 删除不需要的 key
                 simplied_std_answer = remove_keys(std_answer, keys_to_remove)
                 with open(cases_helper.of_case_bindir("answer.yaml", case), "w") as f:
                     f.write(yaml.dump(simplied_std_answer))
-                with open(cases_helper.of_case_bindir("answer.simplied.json", case), "w") as f:
+                with open(
+                    cases_helper.of_case_bindir("answer.simplied.json", case), "w"
+                ) as f:
                     json.dump(simplied_std_answer, f, indent=2)
             except Exception as e:
                 output = "转化为yaml失败"
@@ -693,6 +705,7 @@ if __name__ == "__main__":
     parser.add_argument("ctest_exe", type=str, help="CTest 程序路径")
     parser.add_argument("log_level", type=int, help="日志等级")
     parser.add_argument("--single", type=str, help="运行单个测例")
+    parser.add_argument("--diy-mod", action="store_true", help="diy 模式:")
     args = parser.parse_args()
     print_parsed_args(parser, args)
 
@@ -705,6 +718,8 @@ if __name__ == "__main__":
     print("完成")
 
     log_level = args.log_level
+
+    ctest_cases = "^task2/" if not args.diy_mod else "^task2-diy/"
 
     if case_name := args.single:
         for case in cases_helper.cases:
@@ -726,7 +741,7 @@ if __name__ == "__main__":
                     "--test-dir",
                     args.bindir,
                     "-R",
-                    "^task2/" + case_name,
+                    ctest_cases + case_name,
                     # 注意这里一定不能写成 test2/，否则会无限递归下去
                 ],
                 stdout=out,
@@ -744,7 +759,7 @@ if __name__ == "__main__":
         print("运行 CTest 以得到结果...", end="", flush=True)
         with out, err:
             subps.run(
-                [args.ctest_exe, "--test-dir", args.bindir, "-R", "^task2/.*"],
+                [args.ctest_exe, "--test-dir", args.bindir, "-R", ctest_cases + ".*"],
                 stdout=out,
                 stderr=err,
             )
