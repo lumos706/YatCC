@@ -10,7 +10,9 @@ RUN apt-get install -y --no-install-recommends \
 RUN apt-get install -y --no-install-recommends \
         python3 python3-yaml python3-pytest python3-openai python3-dev
 RUN apt-get install -y --no-install-recommends \
-        qemu-user-static
+        qemu-user-static gcc-arm-linux-gnueabihf libc6-dev-armhf-cross
+RUN apt-get install -y --no-install-recommends \
+        gdb wget unzip        
 RUN apt-get autoremove -y && \
     apt-get clean -y
 
