@@ -64,22 +64,22 @@ set(pybind11_DIR "${_pybind11_dir}/install/share/cmake/pybind11")
 set(CTEST_TEST_TIMEOUT 3)
 
 # 实验一排除测例名的正则式
-set(TASK1_EXCLUDE_REGEX "^performance/.*|^llm-performance/.*")
+set(TASK1_EXCLUDE_REGEX "^performance/.*|^llm-performance/.*|^llm-backend/.*")
 # 实验一测例表，非空时忽略 EXCLUDE_REGEX
 set(TASK1_CASES_TXT "")
 
 # 实验二排除测例名的正则式
-set(TASK2_EXCLUDE_REGEX "^performance/.*|^llm-performance/.*")
+set(TASK2_EXCLUDE_REGEX "^performance/.*|^llm-performance/.*|^llm-backend/.*")
 # 实验二测例表，非空时忽略 EXCLUDE_REGEX
 set(TASK2_CASES_TXT "")
 
 # 实验三排除测例名的正则式
-set(TASK3_EXCLUDE_REGEX "^performance/.*|^llm-performance/.*")
+set(TASK3_EXCLUDE_REGEX "^performance/.*|^llm-performance/.*|^llm-backend/.*")
 # 实验三测例表，非空时忽略 EXCLUDE_REGEX
 set(TASK3_CASES_TXT "")
 
 # 实验四排除测例名的正则式
-set(TASK4_EXCLUDE_REGEX "^functional-.*|^mini-performance/.*")
+set(TASK4_EXCLUDE_REGEX "^functional-.*|^mini-performance/.*|^llm-backend/.*")
 # 实验四 LLM 定向优化测例名正则式
 set(TASK4_LLM_REGEX "^llm-performance/.*")
 # 实验四测例表，非空时忽略 EXCLUDE_REGEX
