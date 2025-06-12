@@ -18,9 +18,12 @@ class Error(Exception):
 
 def get_tm(sp):
     ret = -1
-    matchObj = re.findall("Return Code: (\\d*)", sp)
-    matchObj = matchObj[-1]
-    ret = int(matchObj)
+    # 匹配复数形式 (a+bi 或 a-bi)，或者普通整数（正负数）
+    matchObj = re.findall(r"Return Code: ([-+]?\d*)", sp)
+    if matchObj:  # 检查是否有匹配结果
+        result = matchObj[-1]
+        # 处理普通整数
+        ret = int(result)
     return ret
 
 

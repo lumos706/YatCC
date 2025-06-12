@@ -2,6 +2,7 @@
 #include "LLMHelper.hpp"
 #include <filesystem>
 #include <functional>
+#include <regex>
 #include <llvm/ADT/StringRef.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/PassManager.h>
@@ -55,15 +56,11 @@ IrTransform::IrTransform(
 std::string
 IrTransform::Ir2Asm(IrTransform::IrTransformInfo& mirTransformInfo)
 {
-    // 对比缓存内容、头文件和实现文件的最后修改时间
+    // 如果已存在.s文件，先删除它
     if (Fs::exists(mirTransformInfo.mAsmPath)) {
-        auto asmLastWriteTime = Fs::last_write_time(mirTransformInfo.mAsmPath);
-        auto irLastWriteTime = Fs::last_write_time(mirTransformInfo.mIRPath);
-
-        if (asmLastWriteTime >= irLastWriteTime) {
-            return read_file(mirTransformInfo.mAsmPath);
-        }
+        Fs::remove(mirTransformInfo.mAsmPath);
     }
+    
     std::string systemPrompt =
     read_file(TASK5_DIR "/llm/prompts/Ir2AsmSysPrTpl.xml");
     auto userPrompt =
@@ -85,6 +82,16 @@ IrTransform::Ir2Asm(IrTransform::IrTransformInfo& mirTransformInfo)
         "deepseek-r1",
         handlers,
         Py::dict("max_tokens"_a = 8192, "stream"_a = false, "temperature"_a = 0));
+
+    // 去除response中的所有```符号
+    size_t pos = 0;
+    while ((pos = response.find("```", pos)) != std::string::npos) {
+        response.erase(pos, 3);
+    }
+    
+    // 使用正则表达式去除所有<>及其之间的内容
+    std::regex tag_regex("<[^>]*>");
+    response = std::regex_replace(response, tag_regex, "");
 
     write_file(mirTransformInfo.mAsmPath, response);
 

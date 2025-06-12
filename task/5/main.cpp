@@ -31,11 +31,9 @@ int main(int argc, char ** argv) {
   std::string fileContent = buffer.str();
   sourceFile.close();
   
-  // Remove all include statements using regex
   std::regex includePattern(R"(#include\s*[<"].*[>"].*\n?)");
   std::string processedContent = std::regex_replace(fileContent, includePattern, "");
   
-  // Create ANTLR input stream from the processed content
   ANTLRInputStream input(processedContent);
   SysY2022Lexer lexer(&input);
   CommonTokenStream tokens(&lexer);
@@ -50,7 +48,7 @@ int main(int argc, char ** argv) {
 #ifdef TASK5_LLM
   // 初始化Python解释器
   Py::scoped_interpreter guard{};
-  // import sys 库，添加 TASK4_DIR 到寻找 Python 库的 path 中
+  // import sys 库，添加 TASK5_DIR 到寻找 Python 库的 path 中
   Py::module_ sys = Py::module_::import("sys");
   sys.attr("path").attr("append")(TASK5_DIR);
 
