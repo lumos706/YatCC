@@ -34,6 +34,42 @@ additiveExpression
     :   multiplicativeExpression ((Plus|Minus) multiplicativeExpression)*
     ;
 
+shiftExpression
+    : additiveExpression ((LeftShift | RightShift) additiveExpression)*
+    ;
+
+relationalExpression
+    : shiftExpression ((Less | Greater | LessEqual | GreaterEqual) shiftExpression)*
+    ;
+
+equalityExpression
+    : relationalExpression ((EqualEqual | NotEqual) relationalExpression)*
+    ;
+
+andExpression
+    : equalityExpression (BitAnd equalityExpression)*
+    ;
+
+exclusiveOrExpression
+    : andExpression (BitXor andExpression)*
+    ;
+
+inclusiveOrExpression
+    : exclusiveOrExpression (BitOr exclusiveOrExpression)*
+    ;
+
+logicalAndExpression
+    : inclusiveOrExpression (And inclusiveOrExpression)*
+    ;
+
+logicalOrExpression
+    : logicalAndExpression (Or logicalAndExpression)*
+    ;
+
+conditionalExpression
+    : logicalOrExpression (Question expression Colon conditionalExpression)?
+    ;
+
 assignmentExpression
     :   additiveExpression
     |   unaryExpression Equal assignmentExpression
@@ -43,6 +79,9 @@ expression
     :   assignmentExpression (Comma assignmentExpression)*
     ;
 
+constantExpression
+    : conditionalExpression
+    ;
 
 declaration
     :   declarationSpecifiers initDeclaratorList? Semi
@@ -96,14 +135,32 @@ initializer
     ;
 
 initializerList
-    // :   designation? initializer (Comma designation? initializer)*
-    :   initializer (Comma initializer)*
+    :   designation? initializer (Comma designation? initializer)*
+    ;
+
+designation
+    : designatorList Equal
+    ;
+
+designatorList
+    : designator+
+    ;
+
+designator
+    : LeftBracket constantExpression RightBracket
+    | Dot Identifier
     ;
 
 statement
     :   compoundStatement
     |   expressionStatement
+    |   selectionStatement
     |   jumpStatement
+    ;
+
+selectionStatement
+    : If LeftParen expression RightParen statement (Else statement)?
+    //| Switch LeftParen expression RightParen statement
     ;
 
 compoundStatement

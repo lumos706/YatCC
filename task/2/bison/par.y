@@ -37,14 +37,14 @@ void yyerror (char const *);	// 该函数定义在 par.cpp 中
 
 /* 在下面说明每个非终结符对应的 union 成员，以便进行编译期类型检查 */
 %type <Type> declaration_specifiers type_specifier
+%type <Expr> expression primary_expression postfix_expression unary_expression 
+%type <Expr> multiplicative_expression additive_expression relational_expression
+%type <Expr> equality_expression logical_and_expression logical_or_expression
+%type <Expr> assignment_expression initializer initializer_list
 
-%type <Expr> additive_expression multiplicative_expression unary_expression postfix_expression
-%type <Expr> expression primary_expression assignment_expression initializer initializer_list
-%type <Expr> logical_or_expression logical_and_expression equality_expression relational_expression
-
-%type <Stmt> block_item statement
+%type <Stmt> block_item statement expression_statement
 %type <CompoundStmt> compound_statement block_item_list
-%type <ExprStmt> expression_statement
+// expression_statement 不能转换为 NullStmt 但是有基类Stmt
 %type <ReturnStmt> jump_statement
 
 %type <Decls> external_declaration declaration init_declarator_list parameter_list
@@ -54,10 +54,16 @@ void yyerror (char const *);	// 该函数定义在 par.cpp 中
 
 %type <TranslationUnit> translation_unit
 
-%token <RawStr> IDENTIFIER CONSTANT
-%token INT VOID
 
-%token RETURN
+%token <RawStr> IDENTIFIER CONSTANT
+%token <RawStr> STRING_LITERAL
+%token CONST INT VOID 
+%token IF ELSE WHILE DO FOR
+%token BREAK CONTINUE
+%token RETURN 
+
+%token LE_OP GE_OP EQ_OP NE_OP
+%token AND_OP OR_OP
 
 %start start
 
@@ -65,7 +71,7 @@ void yyerror (char const *);	// 该函数定义在 par.cpp 中
 
 // 起始符号
 start
-  :	{
+  : {
       par::Symtbl::g = new par::Symtbl();
     }
     translation_unit
@@ -107,16 +113,16 @@ function_definition
       auto funcDecl = $2->dcst<asg::FunctionDecl>();
       ASSERT(funcDecl);
       // 设置当前全局的函数作用变量
-      par::gCurrentFunction = funcDecl; 
+      par::gCurrentFunction = funcDecl;
       auto ty = par::gMgr.make<asg::Type>();
       if (funcDecl->type != nullptr)
-        ty->texp = funcDecl->type->texp; 
+        ty->texp = funcDecl->type->texp;
       ty->spec = $1->spec, ty->qual = $1->qual;
       funcDecl->type = ty;
 
     }
     compound_statement
-    {	
+    {
       $$ = par::gCurrentFunction;
       $$->name = $2->name;
       $$->body = $4;
@@ -126,7 +132,7 @@ function_definition
 declaration
   : declaration_specifiers init_declarator_list ';'
     {
-      for (auto decl: *$2)
+      for (auto decl: *$2) 
       {
         auto ty = par::gMgr.make<asg::Type>();
         if (decl->type != nullptr)
@@ -150,6 +156,12 @@ declaration_specifiers
     {
       $$ = $2;
       $$->spec = $1->spec;
+    }
+    // 类型说明符const
+  | CONST type_specifier
+    {
+      $$ = $2;
+      $$->qual.const_ = true;
     }
   ;
 
@@ -178,11 +190,11 @@ declarator
     }
   | declarator '[' ']' // 未知长度数组
     {
-      $$ = $1; 
+      $$ = $1;
       // 填充Type
       auto ty = par::gMgr.make<asg::Type>();
       if ($$->type != nullptr)
-        ty->texp=$$->type->texp;
+        ty->texp = $$->type->texp;
       auto p = par::gMgr.make<asg::ArrayType>();
       p->len = asg::ArrayType::kUnLen;
       if (ty->texp == nullptr)
@@ -200,11 +212,11 @@ declarator
     }
   | declarator '[' assignment_expression ']' // 数组定义
     {
-      $$ = $1; 
+      $$ = $1;
       // 填充Type
       auto ty = par::gMgr.make<asg::Type>();
       if ($$->type != nullptr)
-        ty->texp=$$->type->texp;
+        ty->texp = $$->type->texp;
       auto p = par::gMgr.make<asg::ArrayType>();
       auto integerLiteral = $3->dcst<asg::IntegerLiteral>();
       ASSERT(integerLiteral);
@@ -230,7 +242,7 @@ declarator
       auto p = par::gMgr.make<asg::FunctionType>();
       ty->texp = p;
       $$->type = ty;
-
+      
       // 插入符号表
       par::Symtbl::g->insert_or_assign($$->name, $$);
     }
@@ -275,14 +287,15 @@ parameter_declaration
       auto ty = par::gMgr.make<asg::Type>();
       if ($2->type != nullptr)
         ty->texp = $2->type->texp;
-      ty->spec = $1->spec, ty->qual = $1->qual;
+      ty->spec = $1->spec;
+      ty->qual = $1->qual;
       $2->type = ty;
       $$ = $2;
     }
   ;
 
 compound_statement
-  : {$$ = par::gMgr.make<asg::CompoundStmt>();} // 代码块为空的情况
+  : { $$ = par::gMgr.make<asg::CompoundStmt>(); } // 代码块为空的情况
   |'{' '}' { $$ = par::gMgr.make<asg::CompoundStmt>(); }
   | '{'
     { new par::Symtbl(); } 		// 开启新的符号表作用域
@@ -323,28 +336,73 @@ statement
   | expression_statement { $$ = $1; }
   | jump_statement { $$ = $1; }
   ;
+  | IF '(' expression ')' statement // if结构
+    {
+      auto p = par::gMgr.make<asg::IfStmt>();
+      p->cond = $3;
+      p->then = $5;
+      $$ = p;
+    }
+  | IF '(' expression ')' statement ELSE statement // if-else结构
+    {
+      auto p = par::gMgr.make<asg::IfStmt>();
+      p->cond = $3;
+      p->then = $5;
+      p->else_ = $7;
+      $$ = p;
+    }
+  | WHILE '(' expression ')' statement // while结构
+    {
+      auto p = par::gMgr.make<asg::WhileStmt>();
+      p->cond = $3;
+      p->body = $5;
+      $$ = p;
+    }
+  | DO statement WHILE '(' expression ')' ';' // do-while结构
+    {
+      auto p = par::gMgr.make<asg::DoStmt>();
+      p->body = $2;
+      p->cond = $5;
+      $$ = p;
+    }
+  | CONTINUE ';' // continue语句
+  {
+    $$ = par::gMgr.make<asg::ContinueStmt>();
+  }
+  | BREAK ';' // break语句
+    {
+      $$ = par::gMgr.make<asg::BreakStmt>();
+    }
+  ;
 
 expression_statement
-  : expression ';'
+  : ';' // 空
     {
-      $$ = par::gMgr.make<asg::ExprStmt>();
-      $$->expr = $1;
+      $$ = par::gMgr.make<asg::NullStmt>();
+    }
+  | expression ';'
+    {
+      auto stmt = par::gMgr.make<asg::ExprStmt>();
+      stmt->expr = $1;
+      $$ = stmt;
     }
   ;
 
 jump_statement
   : RETURN ';'
     {
-      $$ = par::gMgr.make<asg::ReturnStmt>();
-      $$->func = par::gCurrentFunction;
+      auto p = par::gMgr.make<asg::ReturnStmt>();
+      p->func = par::gCurrentFunction;
+      $$ = p;
     }
   | RETURN expression ';'
     {
-      $$ = par::gMgr.make<asg::ReturnStmt>();
-      $$->func = par::gCurrentFunction;
-      $$->expr = $2;
+      auto p = par::gMgr.make<asg::ReturnStmt>();
+      p->func = par::gCurrentFunction;
+      p->expr = $2;
+      $$ = p;
     }
-
+  ;
 expression
   : assignment_expression { $$ = $1; }
   | expression ',' assignment_expression
@@ -361,7 +419,7 @@ assignment_expression
   | unary_expression '=' assignment_expression
     {
       auto p = par::gMgr.make<asg::BinaryExpr>();
-      p->op = asg::BinaryExpr::Op::kAssign;;
+      p->op = asg::BinaryExpr::Op::kAssign;
       p->lft = $1, p->rht = $3;
       $$ = p;
     }
@@ -369,22 +427,78 @@ assignment_expression
 
 logical_or_expression
   : logical_and_expression { $$ = $1; }
+  | logical_or_expression OR_OP logical_and_expression
+    {
+      auto p = par::gMgr.make<asg::BinaryExpr>();
+      p->op = asg::BinaryExpr::Op::kOr;
+      p->lft = $1, p->rht = $3;
+      $$ = p;
+    }
   ;
 
 logical_and_expression
   : equality_expression { $$ = $1; }
+  | logical_and_expression AND_OP equality_expression
+    {
+      auto p = par::gMgr.make<asg::BinaryExpr>();
+      p->op = asg::BinaryExpr::Op::kAnd;
+      p->lft = $1, p->rht = $3;
+      $$ = p;
+    }
   ;
 
 equality_expression
   : relational_expression { $$ = $1; }
+  | equality_expression EQ_OP relational_expression // 等于
+    {
+      auto p = par::gMgr.make<asg::BinaryExpr>();
+      p->op = asg::BinaryExpr::Op::kEq;
+      p->lft = $1, p->rht = $3;
+      $$ = p;
+    }
+  | equality_expression NE_OP relational_expression // 不等于
+    {
+      auto p = par::gMgr.make<asg::BinaryExpr>();
+      p->op = asg::BinaryExpr::Op::kNe;
+      p->lft = $1, p->rht = $3;
+      $$ = p;
+    }
   ;
 
 relational_expression
   : additive_expression { $$ = $1; }
+  | relational_expression '<' additive_expression // 小于
+    {
+      auto p = par::gMgr.make<asg::BinaryExpr>();
+      p->op = asg::BinaryExpr::Op::kLt;
+      p->lft = $1, p->rht = $3;
+      $$ = p;
+    }
+  | relational_expression '>' additive_expression // 大于
+    {
+      auto p = par::gMgr.make<asg::BinaryExpr>();
+      p->op = asg::BinaryExpr::Op::kGt;
+      p->lft = $1, p->rht = $3;
+      $$ = p;
+    }
+  | relational_expression LE_OP additive_expression // 小于等于
+    {
+      auto p = par::gMgr.make<asg::BinaryExpr>();
+      p->op = asg::BinaryExpr::Op::kLe;
+      p->lft = $1, p->rht = $3;
+      $$ = p;
+    }
+  | relational_expression GE_OP additive_expression // 大于等于
+    {
+      auto p = par::gMgr.make<asg::BinaryExpr>();
+      p->op = asg::BinaryExpr::Op::kGe;
+      p->lft = $1, p->rht = $3;
+      $$ = p;
+    }
   ;
 
 additive_expression
-  : multiplicative_expression { $$ = $1;}
+  : multiplicative_expression { $$ = $1; }
   | additive_expression '+' multiplicative_expression
     {
       auto p = par::gMgr.make<asg::BinaryExpr>();
@@ -402,11 +516,32 @@ additive_expression
   ;
 
 multiplicative_expression
-  : unary_expression  { $$ = $1;}
+  : unary_expression { $$ = $1; }
+  | multiplicative_expression '*' unary_expression
+    {
+      auto p = par::gMgr.make<asg::BinaryExpr>();
+      p->op = asg::BinaryExpr::Op::kMul;
+      p->lft = $1, p->rht = $3;
+      $$ = p;
+    }
+  | multiplicative_expression '/' unary_expression
+    {
+      auto p = par::gMgr.make<asg::BinaryExpr>();
+      p->op = asg::BinaryExpr::Op::kDiv;
+      p->lft = $1, p->rht = $3;
+      $$ = p;
+    }
+  | multiplicative_expression '%' unary_expression
+    {
+      auto p = par::gMgr.make<asg::BinaryExpr>();
+      p->op = asg::BinaryExpr::Op::kMod;
+      p->lft = $1, p->rht = $3;
+      $$ = p;
+    }
   ;
 
 unary_expression
-  : postfix_expression { $$ = $1;}
+  : postfix_expression { $$ = $1; }
   | '-' unary_expression
     {
       auto p = par::gMgr.make<asg::UnaryExpr>();
@@ -414,10 +549,45 @@ unary_expression
       p->sub = $2;
       $$ = p;
     }
+  | '+' unary_expression
+    {
+      auto p = par::gMgr.make<asg::UnaryExpr>();
+      p->op = asg::UnaryExpr::Op::kPos;
+      p->sub = $2;
+      $$ = p;
+    }
+  | '!' unary_expression
+    {
+      auto p = par::gMgr.make<asg::UnaryExpr>();
+      p->op = asg::UnaryExpr::Op::kNot;
+      p->sub = $2;
+      $$ = p;
+    }
   ;
 
 postfix_expression
   : primary_expression { $$ = $1; }
+  | postfix_expression '[' expression ']' // 数组下标
+    {
+      auto p = par::gMgr.make<asg::BinaryExpr>();
+      p->op = asg::BinaryExpr::Op::kIndex;
+      p->lft = $1, p->rht = $3;
+      $$ = p;
+    }
+  | postfix_expression '(' ')' // 函数调用1
+    {
+      auto p = par::gMgr.make<asg::CallExpr>();
+      p->head = $1;
+      $$ = p;
+    }
+  | postfix_expression '(' argument_expression_list ')' // 函数调用2
+    {
+      auto p = par::gMgr.make<asg::CallExpr>();
+      p->head = $1;
+      p->args = std::move(*$3);
+      delete $3;
+      $$ = p;
+    }
   ;
 
 primary_expression
@@ -434,8 +604,36 @@ primary_expression
   | CONSTANT
     {
       auto p = par::gMgr.make<asg::IntegerLiteral>();
-      p->val = std::stoull(*$1, nullptr, 10);
+      std::string numStr = *$1;
+      if (numStr.size() > 2 && numStr[0] == '0' && (numStr[1] == 'X' || numStr[1] == 'x')) 
+      {
+        // 十六进制
+        p->val = std::stoull(numStr, nullptr, 16);
+      } 
+      else if (numStr.size() > 1 && numStr[0] == '0') 
+      {
+        // 八进制
+        p->val = std::stoull(numStr, nullptr, 8);
+      } 
+      else 
+      {
+        // 十进制
+        p->val = std::stoull(numStr, nullptr, 10);
+      }
       delete $1;
+      $$ = p;
+    }
+  | STRING_LITERAL // 字符串字面量
+    {
+      auto p = par::gMgr.make<asg::StringLiteral>();
+      p->val = std::move(*$1);
+      delete $1;
+      $$ = p;
+    }
+  | '(' expression ')' // 括号表达式
+    {
+      auto p = par::gMgr.make<asg::ParenExpr>();
+      p->sub = $2;
       $$ = p;
     }
   ;
@@ -482,15 +680,31 @@ init_declarator
 initializer
   : assignment_expression
     {
+      // 检查是否是InitListExpr或CallExpr类型
+      auto initListExpr = $1->dcst<asg::InitListExpr>();
       auto callExpr = $1->dcst<asg::CallExpr>();
-      if (callExpr != nullptr)
+      
+      if (callExpr != nullptr) 
       {
         auto implicitCastExpr = dynamic_cast<asg::ImplicitCastExpr*>(callExpr->head);
-        auto declRefExpr = dynamic_cast<asg::DeclRefExpr*>(implicitCastExpr->sub);
-        $$ = callExpr;
+        if (implicitCastExpr != nullptr) {
+          auto declRefExpr = dynamic_cast<asg::DeclRefExpr*>(implicitCastExpr->sub);
+          if (declRefExpr != nullptr) {
+            // 处理 ImplicitCastExpr -> DeclRefExpr
+            $$ = callExpr;
+          } else {
+            // 如果没有 DeclRefExpr，仍然可以直接使用 callExpr
+            $$ = callExpr;
+          }
+        }
+      } else if (initListExpr != nullptr)
+      {
+        // 如果是InitListExpr，直接返回
+        $$ = $1;
       }
       else
       {
+        // 否则，创建一个新的InitListExpr并包装它
         auto p = par::gMgr.make<asg::InitListExpr>();
         p->list.push_back($1);
         $$ = p;
@@ -512,14 +726,31 @@ initializer
 initializer_list
   : initializer
     {
-      $$ = $1;
+      auto initListExpr = $1->dcst<asg::InitListExpr>();
+      if (initListExpr == nullptr) 
+      {
+        auto p = par::gMgr.make<asg::InitListExpr>();
+        p->list.push_back($1);
+        $$ = p;
+      } 
+      else 
+      {
+        $$ = $1;
+      }
     }
   | initializer_list ',' initializer
     {
       auto initListExpr3 = $3->dcst<asg::InitListExpr>();
       auto initListExpr1 = $1->dcst<asg::InitListExpr>();
-      for(auto exper: initListExpr3->list)
-        initListExpr1->list.push_back(exper);
+      if (initListExpr3 != nullptr) 
+      {
+        for(auto expr: initListExpr3->list)
+          initListExpr1->list.push_back(expr);
+      }
+      else 
+      {
+        initListExpr1->list.push_back($3);
+      }
       $$ = initListExpr1;
     }
   ;

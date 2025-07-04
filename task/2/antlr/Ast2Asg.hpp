@@ -66,6 +66,8 @@ public:
 
   Stmt* operator()(ast::JumpStatementContext* ctx);
 
+  Stmt* operator()(ast::SelectionStatementContext* ctx);
+
   //============================================================================
   // 声明
   //============================================================================

@@ -1,4 +1,7 @@
 <task>
+  <instruction>
+    你是 LLVM Pass 的代码分析专家。请根据下方给出的 C++ 头文件和实现文件，简要总结类 {name} 所实现的 LLVM Pass 的主要功能、核心逻辑和用途。请用简洁、准确的语言描述，并以结构化 XML 格式输出总结内容。
+  </instruction>
   <user_input>
     <name>
       {name}
@@ -7,7 +10,13 @@
 {hpp}
     </hpp>
     <cpp>
-{cpp} 
+{cpp}
     </cpp>
   </user_input>
+  <output>
+    <summary>
+      <!-- 请在此处输出该 Pass 的功能总结，例如：
+      该 Pass 统计模块中所有函数的静态调用次数，并将结果输出到指定的输出流。 -->
+    </summary>
+  </output>
 </task>

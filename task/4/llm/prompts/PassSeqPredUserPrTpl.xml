@@ -1,4 +1,16 @@
 <task>
+  <instruction>
+    你是一名经验丰富的 LLVM Pass 管理器和优化专家。你的任务是根据下方提供的 LLVM IR 代码和各个 Pass 的功能总结，推理并给出最优的 Pass 执行顺序。请遵循以下要求：
+    1. 你的目标是最大化 IR 优化效果，提升代码性能和可读性，避免冗余或无效的 Pass 执行。
+    2. 充分考虑各 Pass 之间的依赖关系和相互影响，合理安排顺序（例如将 Mem2Reg 放在前面，常量传播和折叠紧密配合，公共子表达式消除应在相关优化之后等）。
+    3. 只输出 Pass 类名，按顺序用英文逗号分隔。
+    4. 请严格按照如下结构化 XML 格式输出结果。
+    5. 不要输出任何解释说明，只输出 XML 结构。
+    例如：
+    <sequence>
+      Mem2Reg,ConstantPropagation,ConstantFolding,StrengthReduction,AlgebraicIdentities,CommonSubexpressionElimination,InstructionCombining,StaticCallCounterPrinter,...
+    </sequence>
+  </instruction>
   <user_input>
     <ir>
 {ir}
@@ -7,4 +19,9 @@
 {passes}
     </passes>
   </user_input>
+  <output>
+    <sequence>
+      <!-- 在此处输出 Pass 顺序 -->
+    </sequence>
+  </output>
 </task>

@@ -393,20 +393,19 @@ Ast2Asg::operator()(ast::PrimaryExpressionContext* ctx)
 Expr*
 Ast2Asg::operator()(ast::InitializerContext* ctx)
 {
-  if (auto p = ctx->assignmentExpression())
-    return self(p);
+    if (ctx->assignmentExpression())
+        return self(ctx->assignmentExpression());
 
-  auto ret = make<InitListExpr>();
-
-  if (auto p = ctx->initializerList()) {
-    for (auto&& i : p->initializer()) {
-      auto expr = self(i);
-      ret->list.push_back(expr);
+    auto ret = make<InitListExpr>();
+    if (auto lst = ctx->initializerList()) {
+        for (auto ic : lst->initializer()) {
+            auto ch = self(ic);
+            ret->list.push_back(ch);
+        }
     }
-  }
-
-  return ret;
+    return ret;
 }
+
 
 //==============================================================================
 // 语句
@@ -421,10 +420,28 @@ Ast2Asg::operator()(ast::StatementContext* ctx)
   if (auto p = ctx->expressionStatement())
     return self(p);
 
+  if (auto p = ctx->selectionStatement())    // ← 新增
+    return self(p);
+
   if (auto p = ctx->jumpStatement())
     return self(p);
 
   ABORT();
+}
+
+Stmt*
+Ast2Asg::operator()(ast::SelectionStatementContext* ctx)
+{
+  // 生成 if 语句节点
+  auto ret = make<IfStmt>();
+  // 1) 条件表达式（直接取 expression，无需处理 LeftParen/RightParen）
+  ret->cond = self(ctx->expression());
+  // 2) then 分支
+  ret->then = self(ctx->statement(0));
+  // 3) else 分支（可选）
+  if (ctx->Else())
+    ret->else_ = self(ctx->statement(1));
+  return ret;
 }
 
 CompoundStmt*
@@ -566,11 +583,49 @@ Ast2Asg::operator()(ast::InitDeclaratorContext* ctx, SpecQual sq)
     type->texp = texp;
     vdecl->name = std::move(name);
 
-    if (auto p = ctx->initializer())
-      vdecl->init = self(p);
-    else
+    if (auto p = ctx->initializer()) {
+      Expr* init = self(p);  // 获取初始化器表达式
+      if (auto arr = texp->dcst<ArrayType>()) {  // 确保我们正在处理数组类型
+        if (auto il = dynamic_cast<InitListExpr*>(init)) {  // 确保初始化器是 InitListExpr
+          if (!il->list.empty()) {
+            auto flat = std::move(il->list);  // 获取扁平化的初始化器列表
+            il->list.clear();
+            uint32_t rows = arr->len, cols = 1;  // 默认处理一维数组
+    
+            // 判断是否为二维数组类型，如果是，获取列数
+            if (auto subArr = arr->sub->dcst<ArrayType>()) {
+              if (subArr->len == ArrayType::kUnLen) {
+                ABORT();  // 子数组长度未定义
+              }
+              cols = subArr->len;  // 获取列数
+            }
+    
+            // 对于嵌套初始化器，处理二维数组的每一行
+            for (uint32_t r = 0; r < rows; ++r) {
+              auto sub = make<InitListExpr>();  // 创建一行的初始化器
+              for (uint32_t c = 0; c < cols; ++c) {
+                size_t idx = r * cols + c;
+                if (idx < flat.size()) {
+                  sub->list.push_back(flat[idx]);  // 将元素按行列顺序推入
+                } else {
+                  sub->list.push_back(make<ImplicitInitExpr>());  // 如果超出范围，填充为空元素
+                }
+              }
+              il->list.push_back(sub);  // 将每行的初始化器加入外层初始化器列表
+            }
+          }
+        }
+      }
+      vdecl->init = init;  // 设置初始化器
+    }
+    else if (texp->dcst<ArrayType>()) {
+      // 没写 “=” 的数组仍返回一个空的 InitListExpr
+      vdecl->init = make<InitListExpr>();
+    }
+    else {
       vdecl->init = nullptr;
-
+    }
+  
     ret = vdecl;
   }
 

@@ -82,7 +82,16 @@
     "cinttypes": "cpp",
     "typeindex": "cpp",
     "typeinfo": "cpp",
-    "variant": "cpp"
+    "variant": "cpp",
+    "forward_list": "cpp",
+    "unordered_set": "cpp",
+    "ranges": "cpp",
+    "codecvt": "cpp",
+    "text_encoding": "cpp",
+    "valarray": "cpp",
+    "*.inc": "cpp",
+    "*.def": "cpp",
+    "filesystem": "cpp"
   },
 
   //* C/C++

@@ -516,7 +516,16 @@ void MI_Use::rm_use(Func_Asm *func) {
 
 // 生成mov指令
 MI_Move *emit_move(MOperand dst, MOperand src, Machine_Block *mb) {
-    // todo
+    // 如果目标和源完全一样，不生成无用指令
+    if (dst.tag == src.tag && dst.value == src.value) return nullptr;
+    // 生成mov指令
+    auto mv = new MI_Move(dst, src);
+    // 如果mb非空，插入到末尾
+    mv->dst = dst;
+    mv->src = src;
+    mv->neg = false;
+    if (mb) mb->push(mv);
+    return mv;
 }
 
 // 生成二元运算指令
@@ -528,31 +537,159 @@ void emit_Binary(InstructionPtr I, Machine_Block *mb) {
     
     // 处理取模运算(%)，ARM没有直接的取模指令，需要特殊处理
     if (op_type == BINARY_MOD) {
-        // todo
+        // a % b = a - (a / b) * b
+        auto dst = make_operand(bi_I->reg, mb, true);
+        auto lhs = make_operand(bi_I->a, mb, true);
+        auto rhs = make_operand(bi_I->b, mb, true);
+
+        // 1. 计算 a / b
+        auto vreg_div = make_vreg(vreg_count++);
+        auto div_inst = new MI_Binary(BINARY_DIVIDE, vreg_div, lhs, rhs);
+        mb->push(div_inst);
+
+        // 2. 计算 (a / b) * b
+        auto vreg_mul = make_vreg(vreg_count++);
+        auto mul_inst = new MI_Binary(BINARY_MULTIPLY, vreg_mul, vreg_div, rhs);
+        mb->push(mul_inst);
+
+        // 3. 计算 a - (a / b) * b
+        auto mod_inst = new MI_Binary(BINARY_SUBTRACT, dst, lhs, vreg_mul);
+        mb->push(mod_inst);
     } 
     // 处理一元非运算(!x)，转化为1-x
     else if (op_type == UNARY_XOR) {
-        // todo
+        auto dst = make_operand(bi_I->reg, mb, true);
+        auto lhs = make_imm(1);
+        auto rhs = make_operand(bi_I->a, mb, true);
+        // 如果dst和rhs重叠，先用临时寄存器
+        if (dst.tag == rhs.tag && dst.value == rhs.value) {
+            auto tmp = make_vreg(vreg_count++);
+            auto xor_inst = new MI_Binary(BINARY_SUBTRACT, tmp, lhs, rhs);
+            mb->push(xor_inst);
+            emit_move(dst, tmp, mb);
+        } else {
+            auto xor_inst = new MI_Binary(BINARY_SUBTRACT, dst, lhs, rhs);
+            mb->push(xor_inst);
+        }
     } 
     // 处理其他二元操作
     else {
-        // todo
+        auto dst = make_operand(bi_I->reg, mb, true);
+        auto lhs = make_operand(bi_I->a, mb, true);
+        auto rhs = make_operand(bi_I->b, mb, true);
+
+        // 乘法和除法必须操作数都为寄存器
+        if ((op_type == BINARY_MULTIPLY || op_type == BINARY_DIVIDE) && rhs.tag == IMM) {
+            // 立即数不能直接用于mul/sdiv，需先加载到寄存器
+            rhs = make_ror_imm(rhs.value, mb);
+        }
+        auto bin_inst = new MI_Binary(op_type, dst, lhs, rhs);
+        mb->push(bin_inst);
     }
 }
 
 // 生成比较指令
 void emit_Icmp(InstructionPtr I, Machine_Block *mb) {
-    // todo
+    auto icmp_I = dynamic_cast<IcmpInstruction *>(I.get());
+    auto lhs = make_operand(icmp_I->a, mb, false);
+    auto rhs = make_operand(icmp_I->b, mb, false);
+    auto dst = make_operand(icmp_I->reg, mb, true);
+
+    auto cmp_inst = new MI_Compare(lhs, rhs);
+    cmp_inst->lhs = lhs;
+    cmp_inst->rhs = rhs;
+    cmp_inst->neg = false;
+    mb->push(cmp_inst);
+
+    string opstr;
+    opstr += icmp_I->op;
+    Binary_Op_Type cmp_type = Binary_ir2asm[opstr];
+    Branch_Condition cond = binary_op_to_branch_cond(cmp_type);
+
+    emit_move(dst, make_imm(0), mb);
+
+    // 如果dst是r0，且r0此时是函数返回值，先用临时寄存器
+    if (dst.tag == REG && dst.value == r0) {
+        auto tmp = make_vreg(vreg_count++);
+        auto mv = new MI_Move(tmp, make_imm(1));
+        mv->neg = false;
+        mv->cond = cond;
+        mb->push(mv);
+        emit_move(dst, tmp, mb);
+    } else {
+        auto mv = new MI_Move(dst, make_imm(1));
+        mv->neg = false;
+        mv->cond = cond;
+        mb->push(mv);
+    }
 }
 
 // 生成分支指令
+// 辅助函数：通过LabelPtr查找BasicBlockPtr
+static BasicBlockPtr find_bb_by_label(Func_Asm* func_asm, LabelPtr label) {
+    for (auto& kv : func_asm->idx2bb) {
+        if (kv.second->label == label)
+            return kv.second;
+    }
+    return nullptr;
+}
+
 void emit_Branch(Func_Asm *func_asm, InstructionPtr I, Machine_Block *mb) {
-    // todo
+    auto br_I = dynamic_cast<BrInstruction *>(I.get());
+    // 无条件跳转
+    if (br_I->exp == nullptr) {
+        auto tgt_bb = find_bb_by_label(func_asm, br_I->label_true);
+        int tgt_idx = func_asm->bb2idx[tgt_bb];
+        auto tgt = func_asm->mbs[tgt_idx];
+        auto branch = new MI_Branch(NO_CONDITION, tgt);
+        branch->cond = NO_CONDITION;
+        branch->true_target = tgt;
+        branch->false_target = nullptr;
+        mb->push(branch);
+        mb->control_transfer_inst = branch;
+    } else {
+        // 条件跳转
+        // 1. 先生成 cmp 指令: cmp <exp>, #0
+        auto cond_val = br_I->exp;
+        auto cmp_lhs = make_operand(cond_val, mb, true);
+        auto cmp_rhs = make_imm(0);
+        auto cmp_inst = new MI_Compare(cmp_lhs, cmp_rhs);
+        cmp_inst->lhs = cmp_lhs;
+        cmp_inst->rhs = cmp_rhs;
+        cmp_inst->neg = false;
+        mb->push(cmp_inst);
+
+        // 2. 生成分支指令
+        auto true_bb = find_bb_by_label(func_asm, br_I->label_true);
+        auto false_bb = find_bb_by_label(func_asm, br_I->label_false);
+        int true_idx = func_asm->bb2idx[true_bb];
+        int false_idx = func_asm->bb2idx[false_bb];
+        auto true_tgt = func_asm->mbs[true_idx];
+        auto false_tgt = func_asm->mbs[false_idx];
+
+        // 这里假设 exp 非 0 跳 true，等于 0 跳 false，对应 ARM 的 bne
+        auto branch = new MI_Branch(NOT_EQUAL, true_tgt, false_tgt);
+        branch->cond = NOT_EQUAL;
+        branch->true_target = true_tgt;
+        branch->false_target = false_tgt;
+        mb->push(branch);
+        mb->control_transfer_inst = branch;
+    }
 }
 
 // 生成返回指令
 void emit_Return(Func_Asm *func_asm, InstructionPtr I, Machine_Block *mb) {
-    // todo
+    auto ret_I = dynamic_cast<ReturnInstruction *>(I.get());
+    // 有返回值时，先将返回值放入r0
+    if (ret_I->retValue && !ret_I->retValue->isVoid) {
+        auto r0_op = make_reg(r0);
+        auto val_op = make_operand(ret_I->retValue, mb, true);
+        emit_move(r0_op, val_op, mb);
+    }
+    // 生成返回指令
+    auto ret_inst = new MI_Return();
+    mb->push(ret_inst);
+    mb->control_transfer_inst = ret_inst;
 }
 
 // __________________________________task5 end_________________________________________

@@ -10,6 +10,15 @@
 #include "Mem2Reg.hpp"
 #include "StaticCallCounter.hpp"
 #include "StaticCallCounterPrinter.hpp"
+#include "ConstantPropagation.hpp"
+#include "StrengthReduction.hpp"
+#include "AlgebraicIdentities.hpp"
+#include "CommonSubexpressionElimination.hpp"
+#include "InstructionCombining.hpp"
+#include "Inline.hpp"
+#include "DeadCodeElimination.hpp"
+#include "LoopUnroll.hpp"
+#include "LICM.hpp"
 
 #ifdef TASK4_LLM
 
@@ -55,8 +64,8 @@ opt(llvm::Module& mod)
 
   // 添加 LLM 加持的 Pass 到优化管理器中
   mpm.addPass(PassSequencePredict(
-    "<api_key>",
-    "<base_url>",
+    "sk-WbGDWtXCbr6uqPaJDb0f18Cc81D34d0cA9Fe85541b9564F9",
+    "http://505676.proxy.nscc-gz.cn:8888/v1/",
     {
       { "StaticCallCounterPrinter",
         TASK4_DIR "/StaticCallCounterPrinter.hpp",
@@ -77,6 +86,63 @@ opt(llvm::Module& mod)
         [](llvm::ModulePassManager& mpm) {
           mpm.addPass(ConstantFolding(llvm::errs()));
         } },
+      { "ConstantPropagation",
+        TASK4_DIR "/ConstantPropagation.hpp",
+        TASK4_DIR "/ConstantPropagation.cpp",
+        "ConstantPropagation.xml",
+        [](llvm::ModulePassManager& mpm) {
+          mpm.addPass(ConstantPropagation(llvm::errs()));
+        } },
+      { "StrengthReduction",
+        TASK4_DIR "/StrengthReduction.hpp",
+        TASK4_DIR "/StrengthReduction.cpp",
+        "StrengthReduction.xml",
+        [](llvm::ModulePassManager& mpm) {
+          mpm.addPass(StrengthReduction(llvm::errs()));
+        } },
+      { "AlgebraicIdentities",
+        TASK4_DIR "/AlgebraicIdentities.hpp",
+        TASK4_DIR "/AlgebraicIdentities.cpp",
+        "AlgebraicIdentities.xml",
+        [](llvm::ModulePassManager& mpm) {
+          mpm.addPass(AlgebraicIdentities(llvm::errs()));
+        } },
+      { "CommonSubexpressionElimination",
+        TASK4_DIR "/CommonSubexpressionElimination.hpp",
+        TASK4_DIR "/CommonSubexpressionElimination.cpp",
+        "CommonSubexpressionElimination.xml",
+        [](llvm::ModulePassManager& mpm) {
+          mpm.addPass(CommonSubexpressionElimination(llvm::errs()));
+        } },
+      { "InstructionCombining",
+        TASK4_DIR "/InstructionCombining.hpp",
+        TASK4_DIR "/InstructionCombining.cpp",
+        "InstructionCombining.xml",
+        [](llvm::ModulePassManager& mpm) {
+          mpm.addPass(InstructionCombining(llvm::errs()));
+        } },
+      { "Inline",
+        TASK4_DIR "/Inline.hpp",
+        TASK4_DIR "/Inline.cpp",
+        "Inline.xml",
+        [](llvm::ModulePassManager& mpm) {
+          mpm.addPass(Inline(llvm::errs()));
+        } },
+      { "DeadCodeElimination",
+        TASK4_DIR "/DeadCodeElimination.hpp",
+        TASK4_DIR "/DeadCodeElimination.cpp",
+        "DeadCodeElimination.xml",
+        [](llvm::ModulePassManager& mpm) {
+          mpm.addPass(DeadCodeElimination(llvm::errs()));
+        } },
+      { "LoopUnroll",
+        TASK4_DIR "/LoopUnroll.hpp",
+        TASK4_DIR "/LoopUnroll.cpp",
+        "LoopUnroll.xml",
+        [](llvm::ModulePassManager& mpm) {
+          mpm.addPass(LoopUnroll(llvm::errs()));
+        } },
+
     }));
 
 #else
@@ -85,7 +151,19 @@ opt(llvm::Module& mod)
   // 添加优化pass到管理器中
   mpm.addPass(StaticCallCounterPrinter(llvm::errs()));
   mpm.addPass(Mem2Reg());
+  mpm.addPass(ConstantPropagation(llvm::errs()));
   mpm.addPass(ConstantFolding(llvm::errs()));
+  mpm.addPass(Inline(llvm::errs()));
+  // mpm.addPass(LICM(llvm::errs()));
+  
+  mpm.addPass(AlgebraicIdentities(llvm::errs()));
+  mpm.addPass(CommonSubexpressionElimination(llvm::errs()));
+  mpm.addPass(LoopUnroll(llvm::errs()));
+  mpm.addPass(InstructionCombining(llvm::errs()));
+  mpm.addPass(DeadCodeElimination(llvm::errs()));
+  mpm.addPass(StrengthReduction(llvm::errs()));
+  // mpm.addPass(DeadCodeElimination(llvm::errs()));
+
 
 #endif
 

@@ -3,5 +3,13 @@
     <ir>
 {ir}
     </ir>
+    <requirement>
+      请将上述 IR 代码翻译为 ARMv8-A 32 位汇编代码，要求如下：
+      1. 汇编必须以 .arch armv8-a 开头，包含 .text、.align 2、.syntax unified、.arm、.fpu neon 等字段，且顺序与标准 ARM 汇编一致。
+      2. .global main 必须在 main 函数前，所有函数都应有对应的标签（如 main:）。
+      3. main 函数和所有用户自定义函数必须有标准的 ARM 栈帧管理（push {lr}，sub sp, sp, #4，add sp, sp, #4，pop {lr}，bx lr），即使函数体很简单也要包含这些指令。
+      4. 汇编格式必须严格符合 GNU ARM 汇编器规范。
+      5. 只输出合法的 ARM 汇编代码，不要输出任何解释、伪代码或多余内容。
+    </requirement>
   </user_input>
 </task>
