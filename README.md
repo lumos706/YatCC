@@ -4,7 +4,7 @@
 
 # YatCC: Yat Compiler Course
 
-中山大学[编译原理](https://yatcc-ai.com/teach/s2025.html)课程实验。
+中山大学[编译原理](https://yatcc-ai.com/teach/s2025.html)课程实验（Done）。
 
 基于YatCC编译实验内容，中山大学计算机学院与超算中心联合开发了智能编译教学实践平台[YatCC-AI](https://yatcc-ai.com)。YatCC-AI结合国产超算与DeepSeek AI技术，为《编译原理》和《编译器构造实验》课程提供全新的智能化学习体验。平台深度融合高性能计算（HPC）和AI技术，通过云端编译环境、AI辅助开发和实时反馈机制，全面优化实践环节，帮助学生掌握编译技术的核心知识，接触前沿编译技术与应用场景，并提高科研创新能力。
 
